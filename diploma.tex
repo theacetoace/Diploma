@@ -355,19 +355,184 @@ Wang~\cite{wang2006survey} предложил исчерпывающий обз�
 в пространстве плоскостей, соответствующих цветовым сегментам кадра, в сторону уменьшения энергии.
 Такой подход позволяет извлекать карты глубины высокого качества, обладающих временной стабильностью.
 Однако временная сложность алгоритма не подходит для решения прикладных задач, в частности 
-для анализа полнометражного стереоскопического фильма. Недавно предложенный 
+для анализа полнометражного стереоскопического фильма. Недавно предложенный метод
+фильтрации~\cite{he2013guided}, сохраняющий края объектов, позволил положить в основу разрабатываемого
+метода менее вычислительно сложный подход: изначально извлекается сырая карта амплитуды движения 
+с помощью блочного алгоритма оценки векторов движения~\cite{simonyan2008fast}, а затем улучшается
+путем свертки фильтром, сохраняющим границы объектов.
 
-A recently proposed edge-aware filter~\cite{he2013guided} allows us to employ a less sophisticated approach: we obtain a rough motion-strength map through a block-based motion-estimation algorithm~\cite{simonyan2008fast} and then enhance the result using edge-aware convolution.
-To address the contour-matching problem, several very precise methods of closed-contour matching have recently appeared. For instance, Xu et al.~\cite{xu20092d} proposed a method based on contour-flexibility descriptors. Extension to open contours is possible but requires extraction of problem edges using a watershed transform. This transform leads to significant growth in second-order errors, however. Felzenszwalb et al.~\cite{felzenszwalb2007hierarchical} proposed a competing approach that uses a hierarchical shape tree. Unfortunately, this method is not extensible to discontinuous contours, which are critical to our case because motion extraction is imperfect and the resulting motion-edge maps contain numerous discontinuities. Thus, we employ a less precise but more robust approach to input-contour-map inaccuracies that is similar to a distance transform~\cite{borgefors1986distance}.
+Для решения задачи сопоставления контуров, было рассмотрено несколько современных точных алгоритмов
+сопоставления замкнутых контуров. Например, Xu в соавторстве~\cite{xu20092d} предложил метод,
+основанный на дексрипторе гибкости контуров. Расширение на случай не замкнутых контуров возможно, 
+однако потребует использования не самого точного алгоритма водоразделов~\cite{roerdink2000watershed}, что повлечет значительное увеличение ошибок второго рода. Другой 
+подход~\cite{felzenszwalb2007hierarchical} заключается в использовании особой структуры ---
+иерархического дерево форм. К сожалению, данный метод не расширяется на разрывные контура, 
+что критично в нашем случае, так как оценка карт амплитуды движения не является идеальной и содержит
+в том числе большое количество контуров не являющихся непрерывными и замкнутыми. Таким образом, 
+в ходе анализа предметной области было решено использовать менее точный, но более устойчивый
+к качеству анализируемых контуров, метод схожий к distance transform~\cite{borgefors1986distance}.
+
+\subsection{Выводы}
+
+В ходе обзора предметной области были сделаны следующие выводы о структуре проектируемого метода:
+
+\begin{itemize}
+	\item Использовать блочный алгоритм оценки векторов движения с последующим улучшением
+	путем свертки фильтром, сохраняющим границы объектов. Такой подход не даст самой высокой 
+	точности, однако позволит провести анализ за разумное время.
+	\item Использовать похожий на distance transform алгоритм сопоставления контуров, устойчивый
+	к входным данным, потенциально поврежденным, как следствие неидельности используемых методов.
+\end{itemize}
 
 \newpage
 \section{Предложенный метод}
 
-%\input{figures/merged}
+\input{figures/full_workflow}
+\input{figures/merged}
+\input{figures/dfm}
+\input{figures/filtered}
+
+Fig.~\ref{fig:full} shows the scheme of the proposed method for detecting inconsistencies 
+between object motion and the depth map used in converting 2D to 3D video. The method input is S3D 
+video converted from 2D and, optionally, the depth map used during conversion. The method outputs 
+a per-frame score that can be interpreted as a perimeter of objects that were absent from the depth map. 
+It comprises the following steps:
+\begin{enumerate}
+	\item Estimate left-view motion vectors between previous and current frames.
+	\item Estimate disparity map between left and right view (if no depth map is available). 
+	We can use a disparity map instead of a depth map because our method requires only 
+	information about depth-map edges, which match the disparity-map edges.
+	\item Compute motion-strength maps using a motion-vector field refined by temporal 
+	and spatial processing to improve its temporal coherence.
+	\item Perform edge matching between motion-strength and depth maps.
+	\item Compute area of motion-strength-map edges that are absent from the depth map. 
+	This area is the final frame score.
+\end{enumerate}
+
+\input{figures/edges}
+
+To extract both the motion and disparity maps, we employ the block-based matching approach 
+described in~\cite{simonyan2008fast}. To estimate a confidence value for the resulting maps, 
+we use a left\slash right-consistency constraint (LRC)~\cite{egnal2004stereo} 
+(which takes the form of a previous\slash current-consistency constraint in the case of motion estimation).
+
+We compute motion-strength map $M$ as the magnitude of a motion-vector field (see Fig.~\ref{fig:merged}~(a) and (b)).
+Then, to improve the temporal coherence of the motion-strength map, we apply the pipeline
+of temporal and spatial filters shown in Fig.~\ref{fig:dfm}.
+
+We begin by applying a linear transform to the motion-strength map; this transform sets the minimum value 
+in the map equal to 0 and the maximum value equal to 1 (i.e., auto levels). Fig.~\ref{fig:merged}~(d) shows 
+an example intermediate result for this step. Owing to changes in camera and object velocity as well as 
+errors in the motion-vector field, the resulting motion-strength map contains a good deal of flickering. 
+To reduce this effect, we set the mean and standard deviation of each frame equal to the means 
+of these values computed over the previous $n$ frames (our experiments used $n = 10$):
+\begin{equation}
+M_{i}^{'k} = \frac{\mathsf{Std}_{k-n}^{k-1}}{\mathsf{Std}\left[M^k\right]} \left( M_i^k - \mathsf{E}\left[M^k\right]\right) + \mathsf{E}_{k-n}^{k-1}
+\end{equation}
+Here, $\mathsf{E}$ and $\mathsf{Std}$ are the mean and standard deviation, respectively; 
+$M^k_i$ is pixel $i$ of the motion-strength map for frame $k$; and $\mathsf{E}_{k-n}^{k-1}$ and 
+$\mathsf{Std}_{k-n}^{k-1}$ are the temporal mean and standard deviation, respectively. 
+We calculate these last two values as follows:
+\begin{equation}
+\mathsf{E}_{k-n}^{k-1} =  \frac{1}{\#} \sum_{i}\left(\frac{1}{n}\sum_{p=k-n}^{k-1}M_i^p\right)
+\label{fm:temp_mean}
+\end{equation}
+\begin{equation}
+\mathsf{Std}_{k-n}^{k-1} = \sqrt{\frac{1}{\# - 1} \sum_{i}\left(\frac{1}{n}\sum_{p=k-n}^{k-1}M_i^p - \mathsf{E}_{k-n}^{k-1}\right)^2}
+\label{fm:temp_std}
+\end{equation}
+
+In (\ref{fm:temp_mean}) and (\ref{fm:temp_std}) $\#$ denotes the number of pixels in the frame.
+Fig.~\ref{fig:filtered}~(a) shows an intermediate result from this step. As a final global transform 
+we apply histogram matching~\cite{fecker2007time} to the sequence of motion-strength maps. 
+This transform makes the histogram of each these maps match the mean 
+histogram of the previous $n$ frames. An example result appears in Fig.~\ref{fig:filtered}~(b).
+
+To remove any local flickering that persists after the global transforms, we use  the
+temporal-stabilization method proposed in~\cite{matyunin2011temporal} 
+(see the example result in Fig.~\ref{fig:filtered}~(c)).
+
+\input{figures/disp}
+
+Finally, to improve the consistency of the motion-strength-map edges with image edges and 
+to fill areas of low confidence, we use a guided filter~\cite{he2013guided} with the input frame 
+as the guide. Fig.~\ref{fig:filtered}~(d) shows an example of the final motion-strength map.
+
+Now consider the case where no depth map is available and the disparity map is estimated using 
+a block-based matching algorithm.To improve the disparity map we apply a fast version of 
+the weighted-median filter described in~\cite{zhang2014100+}. This filter refines the object contours 
+and removes extraneous edges from what should be smooth disparity transitions. An example of an estimated 
+disparity map before and after filtration appears in Fig.~\ref{fig:disp}~(a) and (b).
+
+We apply a Scharr operator~\cite{jahne1999principles} to both the filtered motion strength-map 
+and the depth map to detect their edges. Fig.~\ref{fig:edges}~(a) and (b) shows example edge maps. 
+Since the motion-strength edge map contains blurred edges caused by guided filtration, we use 
+edge information from the source RGB frame to sharpen them. We cannot, however, use the edge map 
+of the source frame as is, since it contains numerous texture edges that are not actual object edges. 
+To remove most texture edges we apply scale-aware filtration~\cite{zhang2014rolling} to the source 
+frame and extract the edge map from the filtered frame (see Fig.~\ref{fig:edges}~(d)).
+
+Finally, we compute the intersection of the edges we extracted from the motion-strength map ($M$) 
+and the filtered source frame ($I$) using the equation below:
+\begin{equation}
+M_i^{'k} =M_i^k\max_{j  \in B_{r}(i)}(I_j^k)
+\end{equation}
+Here, $B_{r}(i)$ is the neighborhood of radius $r = 0$ around pixel $i$. We use the same procedure 
+with $r = 5$ to refine the disparity map.
+
+To get a final quality score for the current frame, we intersect the edges of the refined motion-strength map 
+with the edges of the disparity map using a method inspired by the distance transform. For each pixel 
+in the motion-strength edge map we iteratively calculate the distance value:
+\begin{equation}
+\begin{split}
+M_i^{k,0} &= M_i^k, \\
+M_i^{k,t} &= M_i^{k,t-1} - \max_{j \in B_t(i)}w(i,j)\frac{\left(\vec{M}_i^{k,t-1}, \vec{D}_j  \right)}{\lVert\vec{D}_j\rVert}
+\end{split}
+\end{equation}
+In this expression, $w(i,j)$ is a distance weight function:
+\begin{equation}
+w(i,j) = \exp\left(\frac{\lVert i-j \rVert^2}{2\sigma^2}\right)
+\end{equation}
+Here, $\vec{M}_i^{k,t-1}$ and $\vec{D}_j$ are motion-strength and disparity edge maps extracted using 
+a Scharr operator. The resulting map contains only edges that are present in the motion-strength map 
+but are missing from the depth map. These edges likely belong to objects that do not appear in the depth map. 
+An example of a final result appears with red lines in Fig.~\ref{fig:disp}~(c).
+
+\input{figures/textureless}
 
 
 \newpage
 \section{Экспериментальная оценка}
+
+We used the algorithm described in the previous section to evaluate the false-positive ratio for 
+a set of five movies. To create a validation data set, we manually classified  the detected frames 
+as either true positive or false positive. The data set consisted of 21 true-positive scenes and 
+31 false-positive scenes (see Table~\ref{tab:testsample}).
+
+\input{figures/results}
+
+The most common source of false-positive alerts were objects in front of textureless 
+backgrounds (e.g., sky). Since the block-based disparity-estimation method fails 
+to reliably estimate disparity for textureless areas, the proposed pipeline is unable to detect 
+differences in object and background disparity even if the object appears in the depth map. 
+Moreover, the human visual system is quite tolerant of missing depth differences in areas 
+that lack color texture. Thus, the reasonable approach to decreasing the false-positive ratio
+is to exclude from the algorithm's consideration any objects that appear in front of a uniform background.
+We did so by weighting the output motion-edge map with the RGB variances of the input 
+frame. Fig.~\ref{fig:textureless} shows  a comparison of  scores computed using the original 
+and modified algorithms for scenes from the validation data set. The modified
+algorithm manages to distinguish scenes with artifacts from scenes mistakenly detected
+by its unmodified version.
+
+\input{figures/testsample}
+
+After modifying the algorithm we applied it to 39 S3D converted movies. In total,
+the algorithm detected 125 problem scenes. Fig.~\ref{fig:results} depicts the per-film distribution.
+
+The average run time of the proposed pipeline when processing a $960\times540$ frame size is 
+3.5~seconds on a 2.67 GHz Intel Core i7 processor with 24 GB of RAM.
+
+\input{figures/result_example}
 
 \newpage
 \section{Программная реализация}
@@ -376,6 +541,16 @@ To address the contour-matching problem, several very precise methods of closed-
 \section{Заключение}
 
 \subsection{Результаты работы}
+
+In this paper we proposed a method for assessing the quality of converted stereoscopic video.
+The method detects foreground objects that are stuck to the background in the depth map and allows
+filmmakers to correct the problem.
+
+We demonstrated the performance of our method using a data set containing 
+scenes from five S3D movies. We reduced the false-positive ratio by forcing it 
+to ignore regions of uniform color. Use of fast depth-from-motion extraction enabled 
+us to analyze 39 full-length converted S3D films and detect 125 scenes with significant 
+artifacts that could cause visual discomfort.
 
 \subsection{Направления для дальнейшего исследования}
 
