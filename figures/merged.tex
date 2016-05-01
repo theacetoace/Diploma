@@ -1,30 +1,33 @@
 \begin{figure}[!h]
-	\begin{minipage}[b]{0.49\linewidth}
+	\begin{minipage}[t]{0.49\linewidth}
 		\centering
 		\centerline{ \includegraphics[width=\linewidth]{motionx} }
-		\centerline{\scriptsize{(a) Horizontal-motion strength map}}\medskip
+		\centerline{(а) Карта амплитуды}
+		\centerline{горизонтального движения}\medskip
 	\end{minipage}%
 	\hfill
-	\begin{minipage}[b]{0.49\linewidth}
+	\begin{minipage}[t]{0.49\linewidth}
 		\centering
 		\centerline{\includegraphics[width=\linewidth]{motiony} }
-		\centerline{\scriptsize{(b) Vertical-motion strength map}}\medskip
+		\centerline{(б) Карта амплитуды}
+		\centerline{вертикального движения}\medskip
 	\end{minipage}
-	\begin{minipage}[b]{0.49\linewidth}
+	\begin{minipage}[t]{0.49\linewidth}
 		\centering
 		\centerline{ \includegraphics[width=\linewidth]{src} }
-		\centerline{\scriptsize{(c) Source left view}}\medskip
+		\centerline{(в) Исходный левый ракурс}\medskip
 	\end{minipage}%
 	\hfill
-	\begin{minipage}[b]{0.49\linewidth}
+	\begin{minipage}[t]{0.49\linewidth}
 		\centering
 		\centerline{\includegraphics[width=\linewidth]{merged} }
-		\centerline{\scriptsize{(d) Overall motion-strength map}}\medskip
+		\centerline{(г) Совмещенная карта}
+		\centerline{амплитуды движения}\medskip
 	\end{minipage}
-	\begin{minipage}[b]{\linewidth}
-	\caption{Example maps of horizontal~(a) and vertical~(b) motion extracted
-        using a block-based motion-estimation algorithm~\cite{simonyan2008fast} for the source frame~(c).
-        The results  are combined into an overall motion-strength map~(d).}
+	\begin{minipage}[t]{\linewidth}
+	\caption{Пример карт горизонтального~(а) и вертикального~(б) движения, извлеченные
+        с помощью блочного алгоритма оценки движения~\cite{simonyan2008fast} для левого ракурса исходного кадра~(в).
+        Результаты объединяются в одну общую карту амлитуды движения~(г).}
     \label{fig:merged}
     \end{minipage}
 \end{figure}
