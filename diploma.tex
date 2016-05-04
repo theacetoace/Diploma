@@ -46,7 +46,7 @@
 
 \begin{flushright}
   \textbf{Научный руководитель:}\\
-  к.ф-м.н.\\
+  к.ф-м.н., старший научный сотрудник\\
   Д.С. Ватолин
 \end{flushright}
 
@@ -91,13 +91,13 @@ conversion results and depth maps}
 Stanislav Dolganov
 \vspace{0.5cm}
 
-The creation of S3Dmovies by converting 2D captured footage
+The creation of S3D movies by converting 2D captured footage
 often introduces depth-map inaccuracies. Such artifacts can
 significantly degrade the viewing experience even if they occur
 only in unsalient background objects.
 In this paper we propose a method for detecting foreground
 objects that are stuck to the background. Our method extracts
-information about motion in the scene and detects conversionrelated
+information about motion in the scene and detects conversion-related
 discrepancies between motion strength and depth. We
 demonstrate the performance of the method by applying it
 to 39 full-length converted 3D movies and by providing the
@@ -105,7 +105,7 @@ results of our analysis as well as examples of detected problem
 shots.
 
 \newpage
-\addcontentsline{toc}{section}{Содержание}
+%\addcontentsline{toc}{section}{Содержание}
 \tableofcontents
 
 \newpage
@@ -502,7 +502,7 @@ $\mathsf{Std}_{k-n}^{k-1}$ --- математическое ожидание и 
 В таких случаях оценивается карта диспаратности с помощью блочного алгоритма сопоставления. 
 Для увеличения качества карты используется быстрая версия фильтрации взвешенной медианы,
 описанной в~\cite{zhang2014100+}. Данная фильтрация улучшает контуры объектов и
-устраняет сторонние границы в местах, которые отвечают плавным переходам по глубине.
+устраняет посторонние границы в местах, которые отвечают плавным переходам по глубине.
 Пример оцененной карты перед и после применения фильтрации можно найти на Рис.~\ref{fig:disp}~(а) и (б).
 
 \subsection{Сопоставление границ}
@@ -650,10 +650,9 @@ Microsoft Visual Studio 2013. Применялась библиотека OpenCV
 	\item Долганов С. В. <<Метод поиска несоответствий границ объектов между результатом 2D-3D конвертации и используемыми картами глубины>> // XXIII Международная конференция студентов, аспирантов и молодых ученых <<Ломоносов-2016>>, стр. 11-13.
 \end{itemize}
 
-Также работа была частично поддержана грантом РФФИ № 15-01-08632-а.
+Также работа была частично поддержана грантами У.М.Н.И.К. и РФФИ № 15-01-08632-а.
 
 \newpage
-%\section*{Список литературы}
 \addcontentsline{toc}{section}{Список литературы}
 \bibliographystyle{gost2008}
 \bibliography{dipbib}
